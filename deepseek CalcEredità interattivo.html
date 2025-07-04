@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Calcolo Eredità Unificato</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f0f0f0; }
+    table { border-collapse: collapse; width: 100%; background: white; margin-bottom: 30px; }
+    th, td { border: 1px solid #ccc; padding: 6px; }
+    th { background: #eee; }
+    input { width: 100px; text-align: right; }
+    h2 { margin-top: 40px; }
+    .number { text-align: right; }
+    .left { text-align: left; }
+    .center { text-align: center; }
+    .totals-input { background-color: #fffde7; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Calcolo Eredità Unificato</h1>
+
+  <h2>1. Valutazione Terreni</h2>
+  
+  <h3>Terreni di Paolo Menghetti</h3>
+  <table>
+    <thead>
+      <tr>
+        <th class="left">Mappale</th>
+        <th class="left">Zona</th>
+        <th>mq</th>
+        <th>CHF/mq</th>
+        <th>Valore</th>
+      </tr>
+    </thead>
+    <tbody id="menghetti-body"></tbody>
+    <tfoot>
+      <tr>
+        <th colspan="4" class="left">Totale Menghetti</th>
+        <th id="tot-menghetti" class="number"></th>
+      </tr>
+    </tfoot>
+  </table>
+
+  <h3>Terreni della prima moglie Ostini</h3>
+  <table>
+    <thead>
+      <tr>
+        <th class="left">Mappale</th>
+        <th class="left">Zona</th>
+        <th>mq</th>
+        <th>CHF/mq</th>
+        <th>Valore</th>
+      </tr>
+    </thead>
+    <tbody id="ostini-body"></tbody>
+    <tfoot>
+      <tr>
+        <th colspan="4" class="left">Totale Ostini</th>
+        <th id="tot-ostini" class="number"></th>
+      </tr>
+    </tfoot>
+  </table>
+
+  <h2>2. Calcolo Quote Ereditarie</h2>
+  <div style="margin-bottom: 15px;">
+    <label>Totale Menghetti: 
+      <input type="number" id="menghetti" class="totals-input" readonly>
+    </label>
+    <label>Totale Ostini: 
+      <input type="number" id="ostini" class="totals-input" readonly>
+    </label>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th class="left">Erede</th>
+        <th>Quota Menghetti</th>
+        <th>CHF</th>
+        <th>Quota Ostini</th>
+        <th>CHF</th>
+        <th>Totale</th>
+      </tr>
+    </thead>
+    <tbody id="tabella-eredi"></tbody>
+  </table>
+
+  <script>
+    const formatCHF = n => n.toLocaleString('it-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    // Dati dei terreni (con la modifica richiesta: 50 → 35.7)
+    const terreni = {
+      menghetti: [
+        { num: 63, zona: "Corogna", mq: 591, valmq: 1700 },
+        { num: 716, zona: "Temporive", mq: 1196, valmq: 895 },
+        { num: 995, zona: "Fondo", mq: 589, valmq: 1443 }
+      ],
+      ostini: [
+        { num: 419, zona: "Mairì", mq: 1398, valmq: 35.7 },  // Modificato da 50 a 35.7
+        { num: 425, zona: "Mairì", mq: 3998, valmq: 5.50 },
+        { num: 459, zona: "San Cristoforo", mq: 1584, valmq: 902 },
+        { num: 721, zona: "Ponte della Ganna", mq: 1310, valmq: 778 },
+        { num: 897, zona: "Ganna", mq: 717, valmq: 893 },
+        { num: 1104, zona: "Vigne dei Valeri", mq: 654, valmq: 902 }
+      ]
+    };
+
+    // Dati degli eredi
+    const eredi = [
+      { nome: "Mirko", m: [14,30], o: [11,30] },
+      { nome: "Claudio", m: [8,90], o: [4,90] },
+      { nome: "Franco", m: [8,90], o: [4,90] },
+      { nome: "Marco", m: [8,90], o: [4,90] },
+      { nome: "Maria", m: [9,60], o: [11,60] },
+      { nome: "Giovanna", m: [11,60], o: [19,60] }
+    ];
+
+    // Crea le tabelle dei terreni
+    function creaTabella(id, dati) {
+      const tbody = document.getElementById(id + "-body");
+      let tot = 0;
+      tbody.innerHTML = "";
+
+      dati.forEach((t, i) => {
+        const row = document.createElement("tr");
+        const valore = t.mq * t.valmq;
+
+        row.innerHTML = `
+          <td class="left">${t.num}</td>
+          <td class="left">${t.zona}</td>
+          <td class="number"><input type="number" value="${t.mq}" onchange="aggiornaTutto()" id="${id}-mq-${i}"></td>
+          <td class="number"><input type="number" value="${t.valmq}" onchange="aggiornaTutto()" id="${id}-valmq-${i}"></td>
+          <td class="number" id="${id}-val-${i}">${formatCHF(valore)}</td>
+        `;
+        tbody.appendChild(row);
+        tot += valore;
+      });
+      
+      document.getElementById("tot-" + id).textContent = formatCHF(tot);
+      return tot;
+    }
+
+    // Calcola le quote ereditarie
+    function calcolaQuote() {
+      const mTot = parseFloat(document.getElementById("menghetti").value) || 0;
+      const oTot = parseFloat(document.getElementById("ostini").value) || 0;
+      const tbody = document.getElementById("tabella-eredi");
+      tbody.innerHTML = "";
+
+      eredi.forEach(e => {
+        const mCHF = mTot * e.m[0] / e.m[1];
+        const oCHF = oTot * e.o[0] / e.o[1];
+        const tr = document.createElement("tr");
+        
+        tr.innerHTML = `
+          <td class="left">${e.nome}</td>
+          <td class="center">${e.m[0]}/${e.m[1]}</td>
+          <td class="number">${formatCHF(mCHF)}</td>
+          <td class="center">${e.o[0]}/${e.o[1]}</td>
+          <td class="number">${formatCHF(oCHF)}</td>
+          <td class="number">${formatCHF(mCHF + oCHF)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Aggiorna tutto
+    function aggiornaTutto() {
+      // Calcola i totali dei terreni
+      let totMenghetti = 0;
+      let totOstini = 0;
+      
+      ["menghetti", "ostini"].forEach(id => {
+        let tot = 0;
+        terreni[id].forEach((t, i) => {
+          const mq = parseFloat(document.getElementById(`${id}-mq-${i}`).value || 0);
+          const valmq = parseFloat(document.getElementById(`${id}-valmq-${i}`).value || 0);
+          const val = mq * valmq;
+          document.getElementById(`${id}-val-${i}`).textContent = formatCHF(val);
+          tot += val;
+        });
+        
+        document.getElementById("tot-" + id).textContent = formatCHF(tot);
+        
+        if (id === "menghetti") totMenghetti = tot;
+        else totOstini = tot;
+      });
+      
+      // Aggiorna i campi di input con i totali
+      document.getElementById("menghetti").value = totMenghetti.toFixed(2);
+      document.getElementById("ostini").value = totOstini.toFixed(2);
+      
+      // Ricalcola le quote ereditarie
+      calcolaQuote();
+    }
+
+    // Inizializzazione
+    function init() {
+      // Crea le tabelle dei terreni e ottieni i totali iniziali
+      const totMenghetti = creaTabella("menghetti", terreni.menghetti);
+      const totOstini = creaTabella("ostini", terreni.ostini);
+      
+      // Imposta i totali nei campi di input
+      document.getElementById("menghetti").value = totMenghetti.toFixed(2);
+      document.getElementById("ostini").value = totOstini.toFixed(2);
+      
+      // Calcola le quote iniziali
+      calcolaQuote();
+    }
+
+    // Avvia l'applicazione
+    init();
+  </script>
+</body>
+</html>
